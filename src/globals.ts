@@ -1,0 +1,3 @@
+interface Window {
+    eventMessage: any;
+}
