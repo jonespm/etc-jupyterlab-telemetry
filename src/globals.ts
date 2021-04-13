@@ -1,3 +1,3 @@
 interface Window {
-    eventMessage: any;
+    glob: any;
 }

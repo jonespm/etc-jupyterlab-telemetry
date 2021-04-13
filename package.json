@@ -47,11 +47,13 @@
   },
   "dependencies": {
     "@jupyterlab/application": "^3.0.0",
+    "@jupyterlab/completer": "^3.0.5",
+    "@jupyterlab/console": "^3.0.6",
     "@jupyterlab/coreutils": "^5.0.0",
     "@jupyterlab/launcher": "^3.0.5",
     "@jupyterlab/mainmenu": "^3.0.5",
     "@jupyterlab/notebook": "^3.0.7",
-    "@jupyterlab/services": "^6.0.0",
+    "@jupyterlab/services": "^6.0.5",
     "@lumino/commands": "^1.12.0"
   },
   "devDependencies": {
