@@ -119,10 +119,13 @@ class NotebookPanelWrapper {
   private _notebookPanel: NotebookPanel;
   private _cells: IObservableUndoableList<ICellModel>;
   private _user: string;
+  private _scrollTimeoutID: number;
 
   constructor({ notebookPanel }: INotebookPanelWrapperOptions) {
 
     this._notebookPanel = notebookPanel;
+
+    notebookPanel.content.node.addEventListener("scroll", this.scroll.bind(this));
 
     this._cells = notebookPanel.model.cells;
 
@@ -149,6 +152,35 @@ class NotebookPanelWrapper {
     delete this._cells;
     console.log(`${this._notebookPanel.context.path} disposed.`)
     delete this._notebookPanel;
+  }
+
+  scroll(e: Event) {
+
+    clearTimeout(this._scrollTimeoutID);
+
+    this._scrollTimeoutID = setTimeout(() => {
+
+      let cells: Array<ICellModel> = [];
+
+      this._notebookPanel.content.widgets.forEach((cell: Cell<ICellModel>) => {
+
+        if ((cell.node.offsetTop + cell.node.offsetHeight) > (e.target as Element).scrollTop) {
+          cells.push(cell.model)
+        }
+      });
+
+      let eventMessage = new EventMessage({
+        eventName: "Scroll finished.",
+        notebookModel: this._notebookPanel.model,
+        cellModels: cells,
+        notebookMeta: this._notebookPanel.model.metadata,
+        timestamp: Date.now(),
+        user: this._user
+      });
+
+      this.logMessage(eventMessage);
+
+    }, 1000);
   }
 
   async logMessage(eventMessage: EventMessage) {
