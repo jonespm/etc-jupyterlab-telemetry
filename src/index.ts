@@ -272,7 +272,14 @@ class NotebookPanelWrapper {
 
   async hashCell(cell: ICellModel): Promise<string> {
 
-    let uInt8Array = (new TextEncoder()).encode(JSON.stringify(cell.toJSON()));
+    let outputs = "";
+    if (cell.type === "code") {
+      outputs = JSON.stringify((cell as CodeCellModel).outputs.toJSON());
+    }
+
+    let input = cell.value.text;
+
+    let uInt8Array = (new TextEncoder()).encode(input + outputs);
 
     let arrayBuffer = await crypto.subtle.digest("SHA-256", uInt8Array);
 
@@ -366,6 +373,7 @@ const extension: JupyterFrontEndPlugin<object> = {
     notebookTracker.widgetAdded.connect(async (tracker: INotebookTracker, notebookPanel: NotebookPanel) => {
 
       await notebookPanel.revealed;
+      await notebookPanel.sessionContext.ready
 
       new NotebookPanelWrapper({ notebookPanel });
 
@@ -374,5 +382,7 @@ const extension: JupyterFrontEndPlugin<object> = {
     return {};
   }
 };
+
+
 
 export default extension;
