@@ -31,7 +31,8 @@ class RouteHandler(APIHandler):
 def setup_handlers(web_app):
     print("setup_handlers")
     host_pattern = ".*$"
-    print("web_app.settings: ", dict(web_app.settings))
+    print("web_app.settings: ", json.dumps(dict(web_app.settings)))
+    print("json.dumps(dict(os.environ))", json.dumps(dict(os.environ)))
     base_url = web_app.settings["base_url"]
     print("base_url: ", base_url)
     route_pattern = url_path_join(base_url, "etc-jupyterlab-telemetry", "(.*)")
