@@ -11,6 +11,7 @@ class RouteHandler(APIHandler):
 
     @tornado.web.authenticated
     def get(self, resource):
+        print("get")
 
         #self.finish(json.dumps({"data":os.environ}))
         # self.finish(json.dumps({"data":type(os.environ)}))
@@ -28,8 +29,11 @@ class RouteHandler(APIHandler):
 
 
 def setup_handlers(web_app):
+    print("setup_handlers")
     host_pattern = ".*$"
     base_url = web_app.settings["base_url"]
+    print("base_url: ", base_url)
     route_pattern = url_path_join(base_url, "etc-jupyterlab-telemetry", "(.*)")
+    print("route_pattern: ", route_pattern)
     handlers = [(route_pattern, RouteHandler)]
     web_app.add_handlers(host_pattern, handlers)

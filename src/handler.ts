@@ -23,13 +23,14 @@ export async function requestAPI<T>(
 
   let response: Response;
   try {
+    console.log("requestUrl, init, settings: ", requestUrl, init, settings);
     response = await ServerConnection.makeRequest(requestUrl, init, settings);
   } catch (error) {
     throw new ServerConnection.NetworkError(error);
   }
 
   let data: any = await response.text();
-
+  console.log("data:", data);
   if (data.length > 0) {
     try {
       data = JSON.parse(data);

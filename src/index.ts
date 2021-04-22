@@ -358,7 +358,7 @@ const extension: JupyterFrontEndPlugin<object> = {
 
     } catch (reason) {
 
-      console.error(`Error on GET /jlab-ext-example/${resource}.\n${reason}`);
+      console.error(`Error on GET /etc-jupyterlab-telemetry/${resource}.\n${reason}`);
     }
     //  Print all environment variables to console and get the Coursera user id.
 
