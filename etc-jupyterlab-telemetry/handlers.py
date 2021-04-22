@@ -34,7 +34,7 @@ def setup_handlers(web_app):
         host_pattern = ".*$"
         print("web_app.settings: ", dict(web_app.settings))
         print("json.dumps(dict(os.environ)): ", json.dumps(dict(os.environ), skipkeys=True, check_circular=True, indent=4))
-        base_url = web_app.settings["base_url"]
+        base_url = os.environ.get('JUPYTERHUB_SERVICE_PREFIX') if os.environ.get('JUPYTERHUB_SERVICE_PREFIX') is not None else web_app.settings["base_url"]
         print("base_url: ", base_url)
         route_pattern = url_path_join(base_url, "etc-jupyterlab-telemetry", "(.*)")
         print("route_pattern: ", route_pattern)
