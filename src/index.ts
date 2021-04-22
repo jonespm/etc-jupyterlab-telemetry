@@ -63,12 +63,12 @@ import { URLExt } from "@jupyterlab/coreutils";
 
 import { ServerConnection } from "@jupyterlab/services";
 
+import { requestAPI } from './handler';
+
 interface IEventMessageOptions {
   eventName: string;
   notebookModel: INotebookModel;
   cellModels: Array<ICellModel>;
-  notebookMeta: IObservableJSON;
-  timestamp: number;
   user: string;
   debug?: any;
 }
@@ -78,7 +78,6 @@ class EventMessage {
   public eventName: string;
   public notebookModel: INotebookModel;
   public cellModels: Array<ICellModel>;
-  public notebookMeta: IObservableJSON;
   public timestamp: number;
   public user: string | null;
   public debug: any;
@@ -87,8 +86,6 @@ class EventMessage {
     eventName,
     notebookModel,
     cellModels,
-    notebookMeta,
-    timestamp,
     user,
     debug
   }: IEventMessageOptions) {
@@ -96,98 +93,80 @@ class EventMessage {
     this.eventName = eventName;
     this.notebookModel = notebookModel;
     this.cellModels = cellModels;
-    this.notebookMeta = notebookMeta;
-    this.timestamp = timestamp;
+    this.timestamp = Date.now();
     this.user = user;
     this.debug = debug;
   }
 }
 
-interface IStateValue {
-  executeRequest?: Kernel.IAnyMessageArgs;
-  executeInput?: Kernel.IAnyMessageArgs;
-  executeReply?: Kernel.IAnyMessageArgs;
-}
-
 interface INotebookPanelWrapperOptions {
   notebookPanel: NotebookPanel;
+  id: string | null;
 }
 
 class NotebookPanelWrapper {
 
-  private _state: Map<string, IStateValue>;
-  private _notebookPanel: NotebookPanel;
-  private _cells: IObservableUndoableList<ICellModel>;
-  private _user: string;
-  private _scrollTimeoutID: number;
+  private notebookPanel: NotebookPanel;
+  private cells: IObservableUndoableList<ICellModel>;
+  private user: string | null;
+  private scrollTimeoutID: number;
 
-  constructor({ notebookPanel }: INotebookPanelWrapperOptions) {
+  constructor({ notebookPanel, id = null }: INotebookPanelWrapperOptions) {
 
-    this._notebookPanel = notebookPanel;
+    this.user = id;
 
-    notebookPanel.content.node.addEventListener("scroll", this.scroll.bind(this));
+    this.notebookPanel = notebookPanel;
 
-    this._cells = notebookPanel.model.cells;
+    this.cells = notebookPanel.model.cells;
 
-    this._notebookPanel.content.model.cells.changed.connect(this.cellsChanged, this);
-    this._notebookPanel.context.saveState.connect(this.saveState, this);
-    this._notebookPanel.sessionContext.sessionChanged.connect(this.sessionChanged, this);
+    notebookPanel.content.node.addEventListener("scroll", this.scroll.bind(this), true);
+    this.notebookPanel.content.model.cells.changed.connect(this.cellsChanged, this);
+    this.notebookPanel.context.saveState.connect(this.saveState, this);
     NotebookActions.executed.connect(this.executed, this);
 
-    this._notebookPanel.disposed.connect(this._dispose, this);
+    this.notebookPanel.disposed.connect(this.dispose, this);
 
-    each(this._cells, (cell: ICellModel, index: number) => {
+    each(this.cells, (cell: ICellModel, index: number) => {
 
       if (!cell.metadata.get("etc_hash")) {
         this.hashCell(cell).then(
-          (r) => cell.metadata.set('etc_hash', r)
+          (r) => cell.metadata.set("etc_hash", r)
         ).catch(j => { console.error(j) });
       }
     });
   }
 
-  private _dispose() {
+  private dispose() {
 
     NotebookActions.executed.disconnect(this.executed, this);
-    delete this._cells;
-    console.log(`${this._notebookPanel.context.path} disposed.`)
-    delete this._notebookPanel;
+    delete this.cells;
+    console.log(`${this.notebookPanel.context.path} disposed.`)
+    delete this.notebookPanel;
   }
 
-  scroll(e: Event) {
+  async hashCell(cell: ICellModel): Promise<string> {
 
-    clearTimeout(this._scrollTimeoutID);
+    let outputs = "";
+    if (cell.type === "code") {
+      outputs = JSON.stringify((cell as CodeCellModel).outputs.toJSON());
+    }
 
-    this._scrollTimeoutID = setTimeout(() => {
+    let input = cell.value.text;
 
-      let cells: Array<ICellModel> = [];
+    let uInt8Array = (new TextEncoder()).encode(input + outputs);
 
-      this._notebookPanel.content.widgets.forEach((cell: Cell<ICellModel>) => {
+    let arrayBuffer = await crypto.subtle.digest("SHA-256", uInt8Array);
 
-        if ((cell.node.offsetTop + cell.node.offsetHeight) > (e.target as Element).scrollTop) {
-          cells.push(cell.model)
-        }
-      });
-
-      let eventMessage = new EventMessage({
-        eventName: "Scroll finished.",
-        notebookModel: this._notebookPanel.model,
-        cellModels: cells,
-        notebookMeta: this._notebookPanel.model.metadata,
-        timestamp: Date.now(),
-        user: this._user
-      });
-
-      this.logMessage(eventMessage);
-
-    }, 1000);
+    return Array.from(new Uint8Array(arrayBuffer)).map(cur => cur.toString(16).padStart(2, "0")).join("");
   }
 
-  async logMessage(eventMessage: EventMessage) {
+  private async logMessage(eventMessage: EventMessage) {
 
     try {
 
       let data = JSON.stringify({ data: eventMessage });
+
+      console.log("\n\n")
 
       console.log(eventMessage.eventName, data);
 
@@ -230,67 +209,66 @@ class NotebookPanelWrapper {
     }
   }
 
-  getCell(cellId: string): ICellModel {
+  /* Event Handlers */
 
-    for (let i = 0; i < this._notebookPanel.model.cells.length; i = i + 1) {
-      let cell = this._notebookPanel.model.cells.get(i);
-      if (cell.id == cellId) {
-        return cell;
-      }
-    }
-  }
+  scroll() {
 
-  sessionChanged(sessionContext: ISessionContext, changedArgs: IChangedArgs<Session.ISessionConnection, Session.ISessionConnection, "session">) {
+    let notebook = this.notebookPanel.content.node;
 
-    changedArgs?.newValue?.kernel?.anyMessage.connect((kernelConnection: Kernel.IKernelConnection, anyMessageArgs: Kernel.IAnyMessageArgs) => {
+    clearTimeout(this.scrollTimeoutID);
 
-      if (!this._user && anyMessageArgs.direction == "recv" && anyMessageArgs?.msg?.header?.username !== "") {
+    this.scrollTimeoutID = setTimeout(() => {
 
-        this._user = anyMessageArgs.msg.header.username;
-      }
-    });
+      let cells: Array<ICellModel> = [];
+
+      for (let cell of this.notebookPanel.content.widgets) {
+
+        let cellTop = cell.node.offsetTop;
+        let cellBottom = cell.node.offsetTop + cell.node.offsetHeight;
+        let viewTop = notebook.scrollTop;
+        let viewBottom = notebook.scrollTop + notebook.clientHeight;
+
+        if (cellTop > viewBottom || cellBottom < viewTop) {
+          continue;
+        }
+
+        cells.push(cell.model)
+      };
+
+      let eventMessage = new EventMessage({
+        eventName: "Scroll finished.",
+        notebookModel: this.notebookPanel.model,
+        cellModels: cells,
+        user: this.user
+      });
+
+      this.logMessage(eventMessage);
+
+    }, 1000);
   }
 
   executed(_: any, arg: { notebook: Notebook; cell: Cell<ICellModel>; }) {
 
-    if (arg.notebook.model === this._notebookPanel.model) {
+    if (arg.notebook.model === this.notebookPanel.model) {
 
       let cell = arg.cell;
 
       let eventMessage = new EventMessage({
         eventName: "Execution finished.",
-        notebookModel: this._notebookPanel.model,
+        notebookModel: this.notebookPanel.model,
         cellModels: [cell.model],
-        notebookMeta: this._notebookPanel.model.metadata,
-        timestamp: Date.now(),
-        user: this._user
+        user: this.user
       });
 
       this.logMessage(eventMessage);
     }
   }
 
-  async hashCell(cell: ICellModel): Promise<string> {
-
-    let outputs = "";
-    if (cell.type === "code") {
-      outputs = JSON.stringify((cell as CodeCellModel).outputs.toJSON());
-    }
-
-    let input = cell.value.text;
-
-    let uInt8Array = (new TextEncoder()).encode(input + outputs);
-
-    let arrayBuffer = await crypto.subtle.digest("SHA-256", uInt8Array);
-
-    return Array.from(new Uint8Array(arrayBuffer)).map(cur => cur.toString(16).padStart(2, "0")).join("");
-  }
-
   saveState(context: DocumentRegistry.IContext<INotebookModel>, saveState: DocumentRegistry.SaveState) {
 
     if (saveState == "started") {
 
-      each(this._cells, (cell: ICellModel, index: number) => {
+      each(this.cells, (cell: ICellModel, index: number) => {
 
         this.hashCell(cell).then((r) => cell.metadata.set('etc_hash', r)).catch(j => { console.error(j) });
       });
@@ -301,11 +279,9 @@ class NotebookPanelWrapper {
 
       let eventMessage = new EventMessage({
         eventName: "Save a notebook.",
-        notebookModel: this._notebookPanel.model,
-        cellModels: this._notebookPanel.content.widgets.filter((cell: Cell<ICellModel>) => this._notebookPanel.content.isSelectedOrActive(cell)).map((value: Cell<ICellModel>) => value.model),
-        notebookMeta: this._notebookPanel.model.metadata,
-        timestamp: Date.now(),
-        user: this._user
+        notebookModel: this.notebookPanel.model,
+        cellModels: this.notebookPanel.content.widgets.filter((cell: Cell<ICellModel>) => this.notebookPanel.content.isSelectedOrActive(cell)).map((value: Cell<ICellModel>) => value.model),
+        user: this.user
       });
 
       this.logMessage(eventMessage);
@@ -322,21 +298,17 @@ class NotebookPanelWrapper {
       case "remove":
         eventMessage = new EventMessage({
           eventName: "Delete a cell.",
-          notebookModel: this._notebookPanel.model,
+          notebookModel: this.notebookPanel.model,
           cellModels: changed.oldValues,
-          notebookMeta: this._notebookPanel.model.metadata,
-          timestamp: Date.now(),
-          user: this._user
+          user: this.user
         });
         break;
       case "add":
         eventMessage = new EventMessage({
           eventName: "Create a cell.",
-          notebookModel: this._notebookPanel.model,
+          notebookModel: this.notebookPanel.model,
           cellModels: changed.newValues,
-          notebookMeta: this._notebookPanel.model.metadata,
-          timestamp: Date.now(),
-          user: this._user
+          user: this.user
         });
         break;
       default:
@@ -362,27 +334,44 @@ const extension: JupyterFrontEndPlugin<object> = {
     INotebookTracker,
     IDocumentManager
   ],
-  activate: (
+  activate: async (
     app: JupyterFrontEnd,
     notebookTracker: INotebookTracker,
     documentManager: IDocumentManager
   ) => {
 
-    console.log("JupyterLab extension etc-jupyterlab-telemetry is activated!")
+    console.log("JupyterLab extension etc-jupyterlab-telemetry is activated!");
+
+    //
+    let resource: string;
+    let data: string;
+    let id: string;
+
+    try {
+      resource = "environ";
+      data = await requestAPI<any>(resource);
+      console.log(`ENVIRONMENT VARIABLES: ${JSON.stringify(data)}`);
+
+      resource = "id";
+      id = await requestAPI<any>(resource);
+      console.log(`WORKSPACE_ID: ${JSON.stringify(id)}`);
+
+    } catch (reason) {
+
+      console.error(`Error on GET /jlab-ext-example/${resource}.\n${reason}`);
+    }
+    //  Print all environment variables to console and get the Coursera user id.
 
     notebookTracker.widgetAdded.connect(async (tracker: INotebookTracker, notebookPanel: NotebookPanel) => {
 
       await notebookPanel.revealed;
       await notebookPanel.sessionContext.ready
 
-      new NotebookPanelWrapper({ notebookPanel });
-
+      new NotebookPanelWrapper({ notebookPanel, id });
     });
 
     return {};
   }
 };
-
-
 
 export default extension;
