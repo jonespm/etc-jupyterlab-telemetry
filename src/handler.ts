@@ -15,6 +15,7 @@ export async function requestAPI<T>(
 ): Promise<T> {
   // Make request to Jupyter API
   const settings = ServerConnection.makeSettings();
+  console.log(JSON.stringify(settings));
   const requestUrl = URLExt.join(
     settings.baseUrl,
     'etc-jupyterlab-telemetry', // API Namespace
