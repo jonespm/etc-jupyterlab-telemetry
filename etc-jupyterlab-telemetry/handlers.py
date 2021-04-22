@@ -40,5 +40,7 @@ def setup_handlers(web_app):
         print("route_pattern: ", route_pattern)
         handlers = [(route_pattern, RouteHandler)]
         web_app.add_handlers(host_pattern, handlers)
+        print("complete.")
     except Exception as e:
         print("Exception: ", e)
+        raise e

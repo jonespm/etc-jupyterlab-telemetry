@@ -37,5 +37,5 @@ def _load_jupyter_server_extension(server_app):
         JupyterLab application instance
     """
     setup_handlers(server_app.web_app)
-    server_app.log.info("Registered HelloWorld extension at URL path /etc-jupyterlab-telemetry")
+    server_app.log.info("Registered JupyterLab Telemetry extension at URL path /etc-jupyterlab-telemetry")
 
