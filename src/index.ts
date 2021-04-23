@@ -339,8 +339,7 @@ const extension: JupyterFrontEndPlugin<object> = {
     notebookTracker: INotebookTracker,
     documentManager: IDocumentManager
   ) => {
-
-    console.log("JupyterLab extension etc-jupyterlab-telemetry is activated!");
+    console.log("JupyterLab extension etc-jupyterlab-telemetry is activated!: 1");
 
     //
     let resource: string;
@@ -352,9 +351,9 @@ const extension: JupyterFrontEndPlugin<object> = {
       data = await requestAPI<any>(resource);
       console.log(`ENVIRONMENT VARIABLES: ${JSON.stringify(data)}`);
 
-      resource = "id";
-      id = await requestAPI<any>(resource);
-      console.log(`WORKSPACE_ID: ${JSON.stringify(id)}`);
+      // resource = "id";
+      // id = await requestAPI<any>(resource);
+      // console.log(`WORKSPACE_ID: ${JSON.stringify(id)}`);
 
     } catch (reason) {
 
