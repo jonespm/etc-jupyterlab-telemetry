@@ -10,22 +10,22 @@ class RouteHandler(APIHandler):
     # Jupyter server
 
     @tornado.web.authenticated
-    def get(self, resource):
+    def get(self):
         print("get")
 
         #self.finish(json.dumps({"data":os.environ}))
         # self.finish(json.dumps({"data":type(os.environ)}))
 
-        if resource == 'environ':
-            result = json.dumps(dict(os.environ))
-            print(result)
-            self.finish(result)
+        # if resource == 'environ':
+        result = json.dumps(dict(os.environ))
+        print(result)
+        self.finish(result)
 
-        if resource == 'id':
-            workspace_id = os.getenv("WORKSPACE_ID") if os.getenv("WORKSPACE_ID") is not None else "UNDEFINED"
-            result = json.dumps({"workspace_id": workspace_id})
-            print(result)
-            self.finish(result)
+        # if resource == 'id':
+        #     workspace_id = os.getenv("WORKSPACE_ID") if os.getenv("WORKSPACE_ID") is not None else "UNDEFINED"
+        #     result = json.dumps({"workspace_id": workspace_id})
+        #     print(result)
+        #     self.finish(result)
 
 
 def setup_handlers(web_app):
