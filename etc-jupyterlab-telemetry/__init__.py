@@ -29,5 +29,5 @@ def _load_jupyter_server_extension(server_app):
     setup_handlers(server_app.web_app)
     server_app.log.info("Registered JupyterLab Telemetry extension at URL path /etc-jupyterlab-telemetry")
 
-# For backward compatibility with the classical notebook
-load_jupyter_server_extension = _load_jupyter_server_extension
+# # For backward compatibility with the classical notebook
+# load_jupyter_server_extension = _load_jupyter_server_extension
