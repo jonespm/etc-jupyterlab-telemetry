@@ -31,14 +31,14 @@ export async function requestAPI<T>(
   }
 
   let data: any = await response.text();
-  console.log("data:", data);
-  if (data.length > 0) {
-    try {
-      data = JSON.parse(data);
-    } catch (error) {
-      console.log('Not a JSON response body.', response);
-    }
-  }
+  console.log("etc-jupyterlab-telemetry data:", data);
+  // if (data.length > 0) {
+  //   try {
+  //     data = JSON.parse(data);
+  //   } catch (error) {
+  //     console.log('Not a JSON response body.', response);
+  //   }
+  // }
 
   if (!response.ok) {
     throw new ServerConnection.ResponseError(response, data.message || data);
