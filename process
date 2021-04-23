@@ -1,1 +1,9 @@
-git status && git add . && git commit -m debug && git push origin main
+git status
+
+git add .
+
+git status
+
+git commit -m debug
+
+git push origin main
