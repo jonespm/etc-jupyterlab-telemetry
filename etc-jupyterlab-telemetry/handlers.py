@@ -37,8 +37,7 @@ def setup_handlers(web_app):
         base_url = web_app.settings["base_url"]
         print("base_url: ", base_url)
         # route_pattern = url_path_join(base_url, "etc-jupyterlab-telemetry", "(.*)")
-        #route_pattern = url_path_join(base_url, "etc-jupyterlab-telemetry", "environ")
-        route_pattern = url_path_join(base_url, "jlab-ext-example", "hello")
+        route_pattern = url_path_join(base_url, "etc-jupyterlab-telemetry", "environ")
         print("route_pattern: ", route_pattern)
         handlers = [(route_pattern, RouteHandler)]
         web_app.add_handlers(host_pattern, handlers)

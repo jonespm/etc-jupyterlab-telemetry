@@ -33,9 +33,10 @@ labext_name = "etc-jupyterlab-telemetry"
 
 data_files_spec = [
     ("share/jupyter/labextensions/%s" % labext_name, str(lab_path), "**"),
-    ("share/jupyter/labextensions/%s" % labext_name, str(HERE), "install.json"),("etc/jupyter/jupyter_server_config.d",
-     "jupyter-config", "etc-jupyterlab-telemetry.json"),
-    
+    ("share/jupyter/labextensions/%s" % labext_name, str(HERE), "install.json"),
+    ("etc/jupyter/jupyter_notebook_config.d", "jupyter-config/jupyter_notebook_config.d", "etc-jupyterlab-telemetry.json"),
+    ("etc/jupyter/jupyter_server_config.d", "jupyter-config/jupyter_server_config.d", "etc-jupyterlab-telemetry.json"),
+
 ]
 
 cmdclass = create_cmdclass("jsdeps",
