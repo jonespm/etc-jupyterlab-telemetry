@@ -347,7 +347,7 @@ const extension: JupyterFrontEndPlugin<object> = {
     let id: string;
 
     try {
-      resource = "environ";
+      resource = "hello";
       data = await requestAPI<any>(resource);
       console.log(`ENVIRONMENT VARIABLES: ${JSON.stringify(data)}`);
 
