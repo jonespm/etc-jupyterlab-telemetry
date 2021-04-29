@@ -75,7 +75,7 @@ interface ICellMeta {
 interface IEventMessage {
   eventName: string;
   notebook?: INotebookModel;
-  UUID: string;
+  notebookUUID: string;
   cellIds: Array<ICellMeta>;
   user: string;
 }
@@ -94,11 +94,11 @@ class NotebookPanelWrapper {
   private scrollTimeoutId: number;
   private notebookNode: HTMLElement;
   private contentChanged: boolean;
-  private UUID: string;
+  private notebookUUID: string;
 
   constructor({ notebookPanel, id = null }: INotebookPanelWrapperOptions) {
 
-    this.UUID = UUID.uuid4();
+    this.notebookUUID = UUID.uuid4();
     this.contentChanged = true;
 
     this.user = id;
@@ -106,17 +106,20 @@ class NotebookPanelWrapper {
     this.cells = notebookPanel.model.cells;
     this.notebookNode = this.notebookPanel.content.node;
 
+    this.notebookPanel.disposed.connect(this.dispose, this);
+
     notebookPanel.model.contentChanged.connect((notebookModel: INotebookModel, _: void) => {
       this.contentChanged = true;
     });
+
+    //
     this.notebookNode.addEventListener("scroll", this.scroll.bind(this), false);
     this.notebookPanel.content.model.cells.changed.connect(this.cellsChanged, this);
     this.notebookPanel.context.saveState.connect(this.saveState, this);
     NotebookActions.executed.connect(this.executed, this);
-    
-    this.notebookPanel.disposed.connect(this.dispose, this);
-
-    this.firstRender();
+    this.notebookPanel.content.activeCellChanged.connect(this.activeCellChanged, this);
+    setTimeout(this.firstRender.bind(this));
+    // Recorded Events.
   }
 
   private dispose() {
@@ -138,11 +141,11 @@ class NotebookPanelWrapper {
 
       if (this.contentChanged) {
         this.contentChanged = false;
-        this.UUID = UUID.uuid4();
+        this.notebookUUID = UUID.uuid4();
 
         eventMessage = {
           eventName,
-          UUID: this.UUID,
+          notebookUUID: this.notebookUUID,
           notebook: this.notebookPanel.model,
           cellIds,
           user: this.user
@@ -151,7 +154,7 @@ class NotebookPanelWrapper {
       else {
         eventMessage = {
           eventName,
-          UUID: this.UUID,
+          notebookUUID: this.notebookUUID,
           cellIds,
           user: this.user
         }
@@ -211,8 +214,30 @@ class NotebookPanelWrapper {
 
     return cellIds;
   }
+
+  cellIndexOf(cellModel: ICellModel) {
+
+    let index: number;
+
+    for (index = 0; index < this.cells.length; index++) {
+      if (cellModel === this.cells.get(index)) {
+        return index;
+      }
+    }
+  }
+
   /* Event Handlers */
 
+  activeCellChanged(notebook: Notebook, cell: Cell<ICellModel>) {
+
+    this.event("active_cell_changed", [
+      {
+        id: cell.model.id, 
+        index: this.cellIndexOf(cell.model)
+      }
+    ]);
+  }
+  
   firstRender() {
 
     let cellIds: Array<ICellMeta>;
@@ -239,22 +264,16 @@ class NotebookPanelWrapper {
     }, 1000);
   }
 
-  executed(_: any, arg: { notebook: Notebook; cell: Cell<ICellModel>; }): void {
+  executed(_: any, arg: { notebook: Notebook; cell: Cell<ICellModel>}): void {
 
     if (arg.notebook.model === this.notebookPanel.model) {
 
-      let index: number;
-      let cell: Cell<ICellModel>;
-
-      cell = arg.cell;
-
-      for (index = 0; index < this.cells.length; index++) {
-        if (cell.model === this.cells.get(index)) {
-          break;
+      this.event("execute_cell", [
+        { 
+          id: arg.cell.model.id, 
+          index: this.cellIndexOf(arg.cell.model) 
         }
-      }
-
-      this.event("execute_cell", [{ id: cell.model.id, index }]);
+      ]);
     }
   }
 
