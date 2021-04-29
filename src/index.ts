@@ -185,7 +185,7 @@ class NotebookPanelWrapper {
     }
   }
 
-  visiblecellIds() {
+  visibleCellIds() {
 
     let cellIds: Array<ICellMeta> = [];
     let cell: Cell<ICellModel>;
@@ -217,7 +217,7 @@ class NotebookPanelWrapper {
 
     let cellIds: Array<ICellMeta>;
 
-    cellIds = this.visiblecellIds();
+    cellIds = this.visibleCellIds();
 
     this.event("first_render", cellIds);
   }
@@ -232,7 +232,7 @@ class NotebookPanelWrapper {
 
       let cellIds: Array<ICellMeta>;
 
-      cellIds = this.visiblecellIds();
+      cellIds = this.visibleCellIds();
 
       this.event("scroll", cellIds);
 
