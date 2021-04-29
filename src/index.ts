@@ -113,6 +113,7 @@ class NotebookPanelWrapper {
     this.notebookPanel.content.model.cells.changed.connect(this.cellsChanged, this);
     this.notebookPanel.context.saveState.connect(this.saveState, this);
     NotebookActions.executed.connect(this.executed, this);
+    
     this.notebookPanel.disposed.connect(this.dispose, this);
 
     let cellModel: ICellModel;
@@ -259,11 +260,13 @@ class NotebookPanelWrapper {
     saveState: DocumentRegistry.SaveState
   ): void {
 
+    let cell: Cell<ICellModel>;
+    let cellMetas: Array<ICellMeta>;
+    let index: number;
+
     if (saveState == "completed") {
 
-      let cell: Cell<ICellModel>;
-      let cellMetas: Array<ICellMeta>;
-      let index: number;
+      cellMetas = [];
 
       for (index = 0; index < this.notebookPanel.content.widgets.length; index++) {
 
@@ -314,23 +317,18 @@ const extension: JupyterFrontEndPlugin<object> = {
 
     //
     let resource: string;
-    let data: string;
     let id: string;
 
     try {
-      // resource = "environ";
-      // data = await requestAPI<any>(resource);
-      // console.log(`ENVIRONMENT VARIABLES: ${JSON.stringify(data)}`);
 
-      // resource = "id";
-      // id = await requestAPI<any>(resource);
-      // console.log(`WORKSPACE_ID: ${JSON.stringify(id)}`);
+      resource = "id";
+      id = await requestAPI<any>(resource);
+      console.log(`WORKSPACE_ID: ${JSON.stringify(id)}`);
 
     } catch (reason) {
 
       console.error(`Error on GET /etc-jupyterlab-telemetry/${resource}.\n${reason}`);
     }
-    //  Print all environment variables to console and get the Coursera user id.
 
     notebookTracker.widgetAdded.connect(async (tracker: INotebookTracker, notebookPanel: NotebookPanel) => {
 
