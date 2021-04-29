@@ -207,7 +207,7 @@ class NotebookPanelWrapper {
 
     clearTimeout(this.scrollTimeoutId);
 
-    this.scrollTimeoutId = setTimeout(async () => {
+    this.scrollTimeoutId = setTimeout(() => {
 
       let cellMetas: Array<ICellMeta> = [];
       let cell: Cell<ICellModel>;
