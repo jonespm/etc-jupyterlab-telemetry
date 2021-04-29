@@ -76,7 +76,7 @@ interface IEventMessage {
   eventName: string;
   notebook?: INotebookModel;
   UUID: string;
-  cellMetas: Array<ICellMeta>;
+  cellIds: Array<ICellMeta>;
   user: string;
 }
 
@@ -116,18 +116,7 @@ class NotebookPanelWrapper {
     
     this.notebookPanel.disposed.connect(this.dispose, this);
 
-    let cellModel: ICellModel;
-    let cellMetas: Array<ICellMeta> = []
-    let index: number;
-
-    for (index = 0; index < this.cells.length; index++) {
-
-      cellModel = this.cells.get(index);
-
-      cellMetas.push({ id: cellModel.id, index: index });
-    }
-
-    this.event("Notebook opened.", cellMetas);
+    this.firstRender();
   }
 
   private dispose() {
@@ -141,7 +130,7 @@ class NotebookPanelWrapper {
     delete this.notebookPanel;
   }
 
-  private async event(eventName: string, cellMetas: Array<ICellMeta>) {
+  private async event(eventName: string, cellIds: Array<ICellMeta>) {
 
     try {
 
@@ -155,7 +144,7 @@ class NotebookPanelWrapper {
           eventName,
           UUID: this.UUID,
           notebook: this.notebookPanel.model,
-          cellMetas,
+          cellIds,
           user: this.user
         }
       }
@@ -163,7 +152,7 @@ class NotebookPanelWrapper {
         eventMessage = {
           eventName,
           UUID: this.UUID,
-          cellMetas,
+          cellIds,
           user: this.user
         }
       }
@@ -196,10 +185,42 @@ class NotebookPanelWrapper {
     }
   }
 
+  visiblecellIds() {
 
+    let cellIds: Array<ICellMeta> = [];
+    let cell: Cell<ICellModel>;
+    let index: number;
+    let id: string;
 
+    for (index = 0; index < this.notebookPanel.content.widgets.length; index++) {
+
+      cell = this.notebookPanel.content.widgets[index];
+      let cellTop = cell.node.offsetTop;
+      let cellBottom = cell.node.offsetTop + cell.node.offsetHeight;
+      let viewTop = this.notebookNode.scrollTop;
+      let viewBottom = this.notebookNode.scrollTop + this.notebookNode.clientHeight;
+
+      if (cellTop > viewBottom || cellBottom < viewTop) {
+        continue;
+      }
+
+      id = cell.model.id;
+
+      cellIds.push({ id, index });
+    }
+
+    return cellIds;
+  }
   /* Event Handlers */
 
+  firstRender() {
+
+    let cellIds: Array<ICellMeta>;
+
+    cellIds = this.visiblecellIds();
+
+    this.event("first_render", cellIds);
+  }
 
   scroll(e: Event) {
 
@@ -209,29 +230,11 @@ class NotebookPanelWrapper {
 
     this.scrollTimeoutId = setTimeout(() => {
 
-      let cellMetas: Array<ICellMeta> = [];
-      let cell: Cell<ICellModel>;
-      let index: number;
-      let id: string;
+      let cellIds: Array<ICellMeta>;
 
-      for (index = 0; index < this.notebookPanel.content.widgets.length; index++) {
+      cellIds = this.visiblecellIds();
 
-        cell = this.notebookPanel.content.widgets[index];
-        let cellTop = cell.node.offsetTop;
-        let cellBottom = cell.node.offsetTop + cell.node.offsetHeight;
-        let viewTop = this.notebookNode.scrollTop;
-        let viewBottom = this.notebookNode.scrollTop + this.notebookNode.clientHeight;
-
-        if (cellTop > viewBottom || cellBottom < viewTop) {
-          continue;
-        }
-
-        id = cell.model.id;
-
-        cellMetas.push({ id, index });
-      }
-
-      this.event("Scroll.", cellMetas);
+      this.event("scroll", cellIds);
 
     }, 1000);
   }
@@ -251,7 +254,7 @@ class NotebookPanelWrapper {
         }
       }
 
-      this.event("Execute cell.", [{ id: cell.model.id, index }]);
+      this.event("execute_cell", [{ id: cell.model.id, index }]);
     }
   }
 
@@ -261,12 +264,12 @@ class NotebookPanelWrapper {
   ): void {
 
     let cell: Cell<ICellModel>;
-    let cellMetas: Array<ICellMeta>;
+    let cellIds: Array<ICellMeta>;
     let index: number;
 
     if (saveState == "completed") {
 
-      cellMetas = [];
+      cellIds = [];
 
       for (index = 0; index < this.notebookPanel.content.widgets.length; index++) {
 
@@ -274,11 +277,11 @@ class NotebookPanelWrapper {
 
         if (this.notebookPanel.content.isSelectedOrActive(cell)) {
 
-          cellMetas.push({ id: cell.model.id, index });
+          cellIds.push({ id: cell.model.id, index });
         }
       }
 
-      this.event("Save notebook.", cellMetas);
+      this.event("save_notebook", cellIds);
     }
   }
 
@@ -287,10 +290,10 @@ class NotebookPanelWrapper {
     changed: IObservableList.IChangedArgs<ICellModel>) {
 
     if (changed.type == "remove") {
-      this.event("Remove cell.", [{id:changed.oldValues[0].id, index:changed.oldIndex}]);
+      this.event("remove_cell", [{id:changed.oldValues[0].id, index:changed.oldIndex}]);
     }
     else if (changed.type == "add") {
-      this.event("Add cell.", [{id:changed.newValues[0].id, index:changed.newIndex}]);
+      this.event("add_cell", [{id:changed.newValues[0].id, index:changed.newIndex}]);
     }
     else {
       console.log(`Unrecognized cellsChanged event: ${changed.type}`)
