@@ -1,0 +1,37 @@
+import { ICellMeta, IEventMessage, IHandler } from './types';
+
+interface IAWSAPIGatewayHandlerOptions {
+    url: string;
+    bucket: string;
+    path: string;
+}
+
+export class AWSAPIGatewayHandler implements IHandler {
+
+    private _url: string;
+    private _bucket: string;
+    private _path: string;
+
+    constructor({ url, bucket, path }: IAWSAPIGatewayHandlerOptions) {
+        this._url = url;
+        this._bucket = bucket;
+        this._path = path;
+
+        this.handle = this.handle.bind(this);
+    }
+
+    async handle(eventMessage: IEventMessage) {
+        
+        let response = await fetch([this._url, this._bucket, this._path].join("/"), {
+            method: "POST",
+            mode: "cors",
+            cache: "no-cache",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            redirect: "follow",
+            referrerPolicy: "no-referrer",
+            body: JSON.stringify(eventMessage)
+        });
+    }
+}

@@ -14,8 +14,12 @@ class RouteHandler(APIHandler):
 
         if resource == 'id':
             workspace_id = os.getenv("WORKSPACE_ID") if os.getenv("WORKSPACE_ID") is not None else "UNDEFINED"
-            result = json.dumps({"workspace_id": workspace_id})
+            result = json.dumps(workspace_id)
             self.finish(result)
+
+        if resource == 'config':
+            with open(os.path.join(os.path.dirname(__file__), 'config.json'), 'r') as config_json:
+                self.finish(config_json.read())
 
 
 def setup_handlers(web_app):

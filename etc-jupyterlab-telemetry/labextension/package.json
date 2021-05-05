@@ -88,7 +88,7 @@
     "extension": true,
     "outputDir": "etc-jupyterlab-telemetry/labextension",
     "_build": {
-      "load": "static/remoteEntry.c30e0b01d93ece8ce018.js",
+      "load": "static/remoteEntry.e9b91256fbad791c3c1e.js",
       "extension": "./extension",
       "style": "./style"
     }
