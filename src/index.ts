@@ -1,230 +1,67 @@
 import {
-  ConnectionLost,
   JupyterFrontEnd,
-  JupyterFrontEndPlugin
-} from "@jupyterlab/application";
-
-import { UUID } from '@lumino/coreutils';
-
-import {
-  IConnectionLost,
-  ILabStatus,
-  ILabShell,
-  ILayoutRestorer,
-  IMimeDocumentTracker,
-  IRouter,
+  JupyterFrontEndPlugin,
   JupyterLab
 } from "@jupyterlab/application";
 
 import {
-  ICommandPalette,
-  ISplashScreen,
-  IThemeManager,
-  IWindowResolver,
-  ISessionContext
-} from "@jupyterlab/apputils";
-
-import {
-  IEditorServices
-} from "@jupyterlab/codeeditor";
-
-import {
-  IConsoleTracker
-} from "@jupyterlab/console";
-
-import {
   IDocumentManager
 } from "@jupyterlab/docmanager";
-import { ISettingRegistry } from "@jupyterlab/settingregistry";
-import { each } from "@lumino/algorithm";
-import { CommandRegistry } from "@lumino/commands";
-import { ISignal, Signal, Slot } from "@lumino/signaling";
-import { PartialJSONValue } from '@lumino/coreutils';
-import { INotebookTracker, NotebookPanel, INotebookModel, Notebook, NotebookModel, CellTypeSwitcher } from "@jupyterlab/notebook";
-import { NotebookActions } from '@jupyterlab/notebook';
-import { Cell, CodeCell, CodeCellModel, ICellModel, ICodeCellModel } from "@jupyterlab/cells";
-import { Session, Kernel } from '@jupyterlab/services';
-import { JSONExt, JSONObject, ReadonlyPartialJSONObject } from "@lumino/coreutils";
-import { Widget } from "@lumino/widgets";
+
 import {
-  IObservableJSON,
+  INotebookTracker,
+  NotebookPanel,
+  INotebookModel,
+  Notebook,
+  NotebookActions
+} from "@jupyterlab/notebook";
+
+import {
+  Cell,
+  CodeCell,
+  ICellModel
+} from "@jupyterlab/cells";
+
+import {
   IObservableList,
-  IObservableUndoableList
+  IObservableUndoableList,
+  IObservableString
 } from "@jupyterlab/observables";
-import { IChangedArgs } from "@jupyterlab/coreutils";
-import { DocumentRegistry } from "@jupyterlab/docregistry";
-import { Contents } from '@jupyterlab/services';
-import { URLExt } from "@jupyterlab/coreutils";
-import { ServerConnection } from "@jupyterlab/services";
-import { requestAPI } from './handler';
-import { ICellMeta, IEventMessage, IHandler } from './types';
-import { AWSAPIGatewayHandler } from './aws_api_gateway_handler'
-import { IObservableString } from '@jupyterlab/observables';
+
 import { IOutputAreaModel } from '@jupyterlab/outputarea';
-import { IOutputModel } from '@jupyterlab/rendermime';
-import * as nbformat from '@jupyterlab/nbformat';
 
-// interface INotebookPanelWrapperOptions {
-//   notebookPanel: NotebookPanel;
-//   id: string | null;
-// }
+import { INotebookContent } from '@jupyterlab/nbformat';
 
-// class NotebookPanelWrapper {
+import {
+  DocumentRegistry
+} from "@jupyterlab/docregistry";
 
-//   private notebookPanel: NotebookPanel;
-//   private cells: IObservableUndoableList<ICellModel>;
-//   private user: string | null;
-//   private scrollTimeoutId: number;
-//   private notebookNode: HTMLElement;
-//   private contentChanged: boolean;
-//   private notebookUUID: string;
+import {
+  requestAPI
+} from './handler';
 
-//   constructor({ notebookPanel, id = null }: INotebookPanelWrapperOptions) {
+import {
+  AWSAPIGatewayHandler
+} from "./aws_api_gateway_handler"
 
-//     this.notebookUUID = UUID.uuid4();
-//     this.contentChanged = true;
-
-//     this.user = id;
-//     this.notebookPanel = notebookPanel;
-//     this.cells = notebookPanel.model.cells;
-//     this.notebookNode = this.notebookPanel.content.node;
-
-//     this.notebookPanel.disposed.connect(this.dispose, this);
-
-//     notebookPanel.model.contentChanged.connect((notebookModel: INotebookModel, _: void) => {
-//       this.contentChanged = true;
-//     });
-
-//     //
-//     this.notebookPanel.content.model.cells.changed.connect(this.cellsChanged, this);
-//     this.notebookPanel.context.saveState.connect(this.saveState, this);
-//     NotebookActions.executed.connect(this.executed, this);
-//     this.notebookPanel.content.activeCellChanged.connect(this.activeCellChanged, this);
-//     setTimeout(this.firstRender.bind(this));
-//     // Recorded Events.
-//   }
-
-//   private dispose() {
-
-//     // NotebookActions.executed.disconnect(this.executed, this);
-
-//     delete this.cells;
-
-//     console.log(`${this.notebookPanel.context.path} disposed.`);
-
-//     delete this.notebookPanel;
-//   }
-
-//   private async event(eventName: string, cellIds: Array<ICellMeta>) {
-
-//     try {
-
-//       let eventMessage: IEventMessage;
-
-//       if (this.contentChanged) {
-//         this.contentChanged = false;
-//         this.notebookUUID = UUID.uuid4();
-
-//         eventMessage = {
-//           eventName,
-//           notebookUUID: this.notebookUUID,
-//           notebook: this.notebookPanel.model,
-//           cellIds,
-//           user: this.user
-//         }
-//       }
-//       else {
-//         eventMessage = {
-//           eventName,
-//           notebookUUID: this.notebookUUID,
-//           cellIds,
-//           user: this.user
-//         }
-//       }
-
-//       console.log("JSON.stringify(eventMessage): ", JSON.stringify(eventMessage));
-
-//       // let response = await fetch("", {
-//       //   method: "POST",
-//       //   mode: "cors",
-//       //   cache: "no-cache",
-//       //   headers: {
-//       //     "Content-Type": "application/json"
-//       //   },
-//       //   redirect: "follow",
-//       //   referrerPolicy: "no-referrer",
-//       //   body: JSON.stringify(eventMessage)
-//       // });
-
-//       // if (response.status !== 200) {
-
-//       //   throw new Error(JSON.stringify({
-//       //     "response.status": response.status,
-//       //     "response.statusText": response.statusText,
-//       //     "response.text()": await response.text()
-//       //   }));
-//       // }
-//     }
-//     catch (e) {
-//       console.error(e);
-//     }
-//   }
-
-//   visibleCellIds() {
-
-
-//   }
-
-//   cellIndexOf(cellModel: ICellModel) {
-
-//     let index: number;
-
-//     for (index = 0; index < this.cells.length; index++) {
-//       if (cellModel === this.cells.get(index)) {
-//         return index;
-//       }
-//     }
-//   }
-
-//   /* Event Handlers */
-
-//   activeCellChanged(notebook: Notebook, cell: Cell<ICellModel>) {
-
-//     this.event("active_cell_changed", [
-//       {
-//         id: cell.model.id,
-//         index: this.cellIndexOf(cell.model)
-//       }
-//     ]);
-//   }
-
-//   firstRender() {
-
-//     let cellIds: Array<ICellMeta>;
-
-//     cellIds = this.visibleCellIds();
-
-//     this.event("first_render", cellIds);
-//   }
-
-
-
-
-
-// }
-
+import {
+  ICellMeta,
+  IHandler
+} from './types';
 
 
 class EventMessageHandler {
 
   private _notebookState;
+  private _handler: IHandler;
 
   constructor(
-    { notebookState }:
-      { notebookState: NotebookState }
+    { notebookState, handler }:
+      { notebookState: NotebookState, handler: IHandler }
   ) {
 
     this._notebookState = notebookState;
+    this._handler = handler;
   }
 
   async message(name: string, metas: Array<any>) {
@@ -234,7 +71,7 @@ class EventMessageHandler {
       let notebook = this._notebookState.notebook;
       let cellState = this._notebookState.cellState;
 
-      let nbFormatNotebook = (notebook.model.toJSON() as nbformat.INotebookContent);
+      let nbFormatNotebook = (notebook.model.toJSON() as INotebookContent);
 
       for (let index = 0; index < this._notebookState.notebook.widgets.length; index++) {
 
@@ -248,6 +85,8 @@ class EventMessageHandler {
       }
 
       console.log({ name: name, notebook: nbFormatNotebook, cells: metas });
+
+      await this._handler.handle({ name: name, notebook: nbFormatNotebook, cells: metas });
 
       for (let index = 0; index < this._notebookState.notebook.widgets.length; index++) {
 
@@ -286,7 +125,7 @@ class NotebookState {
       if (args.type == "add") {
 
         this.updateCellState();
-        //  A cell was added; hence we update the cell state.
+        //  A cell was added; hence, we update the cell state.
       }
     }, this);
   }
@@ -302,7 +141,6 @@ class NotebookState {
 
         cell.inputArea.model.value.changed.connect(
           (sender: IObservableString, args: IObservableString.IChangedArgs) => {
-            console.log('cell.inputArea.model.value.changed');
             let state = this.cellState.get(cell);
             state.changed = true;
             //  The input area changed; hence, the changed state is set to true.
@@ -314,14 +152,16 @@ class NotebookState {
             (sender: IOutputAreaModel, args: IOutputAreaModel.ChangedArgs
             ) => {
               if (args.type == "add") {
+                //  An output has been added to the cell; hence, compare the current state with the new state.
                 let state = this.cellState.get(cell);
                 let output = this.cellOutput(cell);
                 if (output !== state.output) {
+                  //  The output has changed; hence, set changed to true and update the output state.
                   state.changed = true;
                   state.output = output;
                 }
                 else {
-                  state.changed = false;
+                  //  The output hasn't changed; hence, leave the state as is.
                 }
               }
             });
@@ -340,7 +180,9 @@ class NotebookState {
 
       for (let index = 0; index < outputs.length; index++) {
 
-        output = output + JSON.stringify(outputs.get(index).data);
+        for (let key of Object.keys(outputs.get(index).data).sort()) {
+          output = output + JSON.stringify(outputs.get(index).data[key]);
+        }
       }
       return output;
     }
@@ -452,61 +294,85 @@ class CellExecutedEvent {
   }
 }
 
+class ScrollEvent {
 
-// class ScrollEvent {
+  private _handler: EventMessageHandler;
+  private _notebook: Notebook;
+  private _timeout: number;
 
-//   private _handler: EventMessageHandler;
-//   private _notebook: Notebook;
-//   private _timeout: number;
+  constructor(
+    { notebook, handler }:
+      { notebook: Notebook, handler: EventMessageHandler }) {
 
-//   constructor(
-//     { notebook, handler }:
-//       { notebook: Notebook, handler: EventMessageHandler }) {
+    this._notebook = notebook;
+    this._handler = handler;
 
-//     this._notebook = notebook;
-//     this._handler = handler;
+    this._notebook.node.addEventListener("scroll", this.event.bind(this), false);
+  }
 
-//     this._notebook.node.addEventListener("scroll", this.event.bind(this), false);
-//   }
+  event(e: Event): void {
 
-//   event(e: Event): void {
+    e.stopPropagation();
 
-//     e.stopPropagation();
+    clearTimeout(this._timeout);
 
-//     clearTimeout(this._timeout);
+    this._timeout = setTimeout(() => {
 
-//     this._timeout = setTimeout(() => {
+      let cellIds: Array<ICellMeta> = [];
+      let cell: Cell<ICellModel>;
+      let index: number;
+      let id: string;
 
-//       let cellIds: Array<ICellMeta> = [];
-//       let cell: Cell<ICellModel>;
-//       let index: number;
-//       let id: string;
+      for (index = 0; index < this._notebook.widgets.length; index++) {
 
-//       for (index = 0; index < this._notebook.widgets.length; index++) {
+        cell = this._notebook.widgets[index];
 
-//         cell = this.notebookPanel.content.widgets[index];
+        let cellTop = cell.node.offsetTop;
+        let cellBottom = cell.node.offsetTop + cell.node.offsetHeight;
+        let viewTop = this._notebook.node.scrollTop;
+        let viewBottom = this._notebook.node.scrollTop + this._notebook.node.clientHeight;
 
-//         let cellTop = cell.node.offsetTop;
-//         let cellBottom = cell.node.offsetTop + cell.node.offsetHeight;
-//         let viewTop = this.notebookNode.scrollTop;
-//         let viewBottom = this.notebookNode.scrollTop + this.notebookNode.clientHeight;
+        if (cellTop > viewBottom || cellBottom < viewTop) {
+          continue;
+        }
 
-//         if (cellTop > viewBottom || cellBottom < viewTop) {
-//           continue;
-//         }
+        id = cell.model.id;
 
-//         id = cell.model.id;
+        cellIds.push({ id, index });
+      }
 
-//         cellIds.push({ id, index });
-//       }
+      this._handler.message("scroll", cellIds);
 
-//       this.event("scroll", cellIds);
+    }, 1000);
 
-//     }, 1000);
+  }
+}
 
-//   }
-// }
+class ActiveCellChangedEvent {
 
+  private _handler: EventMessageHandler;
+  private _notebook: Notebook;
+
+  constructor(
+    { notebook, handler }:
+      { notebook: Notebook, handler: EventMessageHandler }) {
+
+    this._notebook = notebook;
+    this._handler = handler;
+
+    this._notebook.activeCellChanged.connect(this.event, this);
+  }
+
+  event(send: Notebook, args: Cell<ICellModel>): void {
+
+    this._handler.message("active_cell_changed", [
+      {
+        id: args.model.id,
+        index: this._notebook.widgets.findIndex((value: Cell<ICellModel>) => value == args)
+      }
+    ]);
+  }
+}
 
 /**
  * Initialization data for the etc-jupyterlab-telemetry extension.
@@ -527,14 +393,6 @@ const extension: JupyterFrontEndPlugin<object> = {
     info: JupyterLab.IInfo
   ) => {
     console.log("JupyterLab extension etc-jupyterlab-telemetry is activated!");
-
-    let handler: AWSAPIGatewayHandler;
-
-    handler = new AWSAPIGatewayHandler({
-      url: "https://293p82kx3j.execute-api.us-east-1.amazonaws.com/adpatter-api-aws-edtech-labs-si-umich-edu",
-      bucket: "adpatter-s3-aws-edtech-labs-si-umich-edu",
-      path: "test"
-    });
 
     let resource: string;
     let id: string = null;
@@ -558,6 +416,13 @@ const extension: JupyterFrontEndPlugin<object> = {
       console.error(`Error on GET /etc-jupyterlab-telemetry/${resource}.\n${reason}`);
     }
 
+    let handler: IHandler;
+
+    handler = new AWSAPIGatewayHandler({
+      url: "https://telemetry.mentoracademy.org",
+      bucket: "telemetry-s3-aws-edtech-labs-si-umich-edu",
+      path: "refactor-test"
+    });
 
     notebookTracker.widgetAdded.connect(async (sender: INotebookTracker, notebookPanel: NotebookPanel) => {
 
@@ -565,7 +430,9 @@ const extension: JupyterFrontEndPlugin<object> = {
       await notebookPanel.sessionContext.ready;
 
       let notebookState = new NotebookState({ notebook: notebookPanel.content });
-      let eventMessageHandler = new EventMessageHandler({ notebookState: notebookState });
+
+      let eventMessageHandler = new EventMessageHandler({ notebookState, handler });
+
       eventMessageHandler.message(
         "open_notebook",
         notebookPanel.content.widgets.map((cell: Cell<ICellModel>, index: number) =>
@@ -575,6 +442,8 @@ const extension: JupyterFrontEndPlugin<object> = {
       new CellsChangedEvent({ notebook: notebookPanel.content, handler: eventMessageHandler });
       new SaveNotebookEvent({ notebookPanel: notebookPanel, handler: eventMessageHandler });
       new CellExecutedEvent({ notebook: notebookPanel.content, handler: eventMessageHandler });
+      new ScrollEvent({ notebook: notebookPanel.content, handler: eventMessageHandler });
+      new ActiveCellChangedEvent({ notebook: notebookPanel.content, handler: eventMessageHandler });
 
     });
 
@@ -583,3 +452,4 @@ const extension: JupyterFrontEndPlugin<object> = {
 };
 
 export default extension;
+

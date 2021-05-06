@@ -21,7 +21,7 @@ export class AWSAPIGatewayHandler implements IHandler {
     }
 
     async handle(eventMessage: IEventMessage) {
-        
+
         let response = await fetch([this._url, this._bucket, this._path].join("/"), {
             method: "POST",
             mode: "cors",
@@ -31,7 +31,18 @@ export class AWSAPIGatewayHandler implements IHandler {
             },
             redirect: "follow",
             referrerPolicy: "no-referrer",
-            body: JSON.stringify(eventMessage)
+            body: JSON.stringify({data: eventMessage})
         });
+
+        if (response.status !== 200) {
+
+            throw new Error(JSON.stringify({
+                "response.status": response.status,
+                "response.statusText": response.statusText,
+                "response.text()": await response.text()
+            }));
+        }
+
+        return response;
     }
 }
