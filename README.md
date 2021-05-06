@@ -1,9 +1,8 @@
 # etc-jupyterlab-telemetry
 
-![Github Actions Status](https://github.com/github_username/etc-jupyterlab-telemetry/workflows/Build/badge.svg)[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/github_username/etc-jupyterlab-telemetry/main?urlpath=lab)
+![Github Actions Status](https://github.com/educational-technology-collective/etc-jupyterlab-telemetry/workflows/Build/badge.svg)[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/educational-technology-collective/etc-jupyterlab-telemetry/main?urlpath=lab)
 
 A JupyterLab extension.
-
 
 This extension is composed of a Python package named `etc-jupyterlab-telemetry`
 for the server extension and a NPM package named `etc-jupyterlab-telemetry`

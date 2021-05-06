@@ -394,28 +394,6 @@ const extension: JupyterFrontEndPlugin<object> = {
   ) => {
     console.log("JupyterLab extension etc-jupyterlab-telemetry is activated!");
 
-    let resource: string;
-    let id: string = null;
-    let config: object = null;
-
-    try {
-      resource = "id";
-      id = await requestAPI<any>(resource);
-      console.log(`id: ${id}`);
-    } catch (reason) {
-
-      console.error(`Error on GET /etc-jupyterlab-telemetry/${resource}.\n${reason}`);
-    }
-
-    try {
-      resource = "config";
-      config = await requestAPI<object>(resource);
-      console.log(`paths: ${JSON.stringify(config)}`);
-    } catch (reason) {
-
-      console.error(`Error on GET /etc-jupyterlab-telemetry/${resource}.\n${reason}`);
-    }
-
     let handler: IHandler;
 
     handler = new AWSAPIGatewayHandler({
@@ -423,6 +401,15 @@ const extension: JupyterFrontEndPlugin<object> = {
       bucket: "telemetry-s3-aws-edtech-labs-si-umich-edu",
       path: "refactor-test"
     });
+
+    // let resource = "id";
+    // try {
+    //   let id = await requestAPI<any>(resource);
+    //   console.log(`id: ${id}`);
+    // } catch (reason) {
+
+    //   console.error(`Error on GET /etc-jupyterlab-telemetry/${resource}.\n${reason}`);
+    // }
 
     notebookTracker.widgetAdded.connect(async (sender: INotebookTracker, notebookPanel: NotebookPanel) => {
 
