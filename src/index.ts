@@ -54,17 +54,23 @@ class EventMessageHandler {
 
   private _notebookState;
   private _handler: IHandler;
+  private _id: string
+  private _seq: number;
 
   constructor(
-    { notebookState, handler }:
-      { notebookState: NotebookState, handler: IHandler }
+    { notebookState, handler, id }:
+      { notebookState: NotebookState, handler: IHandler, id: string }
   ) {
 
     this._notebookState = notebookState;
     this._handler = handler;
+    this._id = id;
+    this._seq = 0;
+
+    this.message = this.message.bind(this);
   }
 
-  async message(name: string, metas: Array<any>) {
+  async message(name: string, cells: Array<any>) {
 
     try {
 
@@ -78,26 +84,36 @@ class EventMessageHandler {
         let cell: Cell<ICellModel> = this._notebookState.notebook.widgets[index];
 
         if (cellState.get(cell).changed === false) {
-          //  The cell has not changed; hence, the notebook format cell contains just its id.
+          //  The cell has not changed; hence, the notebook format cell will contain just its id.
 
           (nbFormatNotebook.cells[index] as any) = { id: nbFormatNotebook.cells[index].id };
         }
       }
 
-      console.log({ name: name, notebook: nbFormatNotebook, cells: metas });
+      this._seq = this._seq + 1;
 
-      await this._handler.handle({ name: name, notebook: nbFormatNotebook, cells: metas });
-
-      for (let index = 0; index < this._notebookState.notebook.widgets.length; index++) {
-
-        let cell: Cell<ICellModel> = this._notebookState.notebook.widgets[index];
-        let state = cellState.get(cell);
-        state.changed = false;
-        //  The message was handled successfully; hence, it should be set to unchanged.
+      let message = {
+        name: name,
+        notebook: nbFormatNotebook,
+        cells: cells,
+        id: this._id,
+        seq: this._seq
       }
+
+      this._notebookState.notebook.widgets.forEach((cell: Cell<ICellModel>) => {
+        cellState.get(cell).changed = false;
+        //  The cell state has been captured; hence, set all states to not changed.
+      });
+
+      console.log(message);
+
+      await this._handler.handle(message);
+
     }
     catch (e) {
       console.error(e);
+
+      setTimeout(this.message, 1000, name, cells);
     }
   }
 }
@@ -374,6 +390,30 @@ class ActiveCellChangedEvent {
   }
 }
 
+class OpenNotebookEvent {
+
+  private _handler: EventMessageHandler;
+  private _notebook: Notebook;
+
+  constructor(
+    { notebook, handler }:
+      { notebook: Notebook, handler: EventMessageHandler }) {
+
+    this._notebook = notebook;
+    this._handler = handler;
+
+    setTimeout(this.event.bind(this));
+  }
+
+  event(): void {
+    this._handler.message(
+      "open_notebook",
+      this._notebook.widgets.map((cell: Cell<ICellModel>, index: number) =>
+        ({ id: cell.model.id, index: index })
+      ));
+  }
+}
+
 /**
  * Initialization data for the etc-jupyterlab-telemetry extension.
  */
@@ -402,14 +442,15 @@ const extension: JupyterFrontEndPlugin<object> = {
       path: "refactor-test"
     });
 
-    // let resource = "id";
-    // try {
-    //   let id = await requestAPI<any>(resource);
-    //   console.log(`id: ${id}`);
-    // } catch (reason) {
+    let resource: string = "id";
+    let id: string;
 
-    //   console.error(`Error on GET /etc-jupyterlab-telemetry/${resource}.\n${reason}`);
-    // }
+    try { // to get the user id.
+      id = await requestAPI<any>(resource);
+    } catch (reason) {
+
+      console.error(`Error on GET /etc-jupyterlab-telemetry/${resource}.\n${reason}`);
+    }
 
     notebookTracker.widgetAdded.connect(async (sender: INotebookTracker, notebookPanel: NotebookPanel) => {
 
@@ -418,14 +459,9 @@ const extension: JupyterFrontEndPlugin<object> = {
 
       let notebookState = new NotebookState({ notebook: notebookPanel.content });
 
-      let eventMessageHandler = new EventMessageHandler({ notebookState, handler });
+      let eventMessageHandler = new EventMessageHandler({ notebookState, handler, id });
 
-      eventMessageHandler.message(
-        "open_notebook",
-        notebookPanel.content.widgets.map((cell: Cell<ICellModel>, index: number) =>
-          ({ id: cell.model.id, index: index })
-        ));
-
+      new OpenNotebookEvent({ notebook: notebookPanel.content, handler: eventMessageHandler })
       new CellsChangedEvent({ notebook: notebookPanel.content, handler: eventMessageHandler });
       new SaveNotebookEvent({ notebookPanel: notebookPanel, handler: eventMessageHandler });
       new CellExecutedEvent({ notebook: notebookPanel.content, handler: eventMessageHandler });

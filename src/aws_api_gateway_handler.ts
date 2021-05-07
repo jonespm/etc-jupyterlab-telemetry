@@ -1,4 +1,4 @@
-import { ICellMeta, IEventMessage, IHandler } from './types';
+import { IHandler } from './types';
 
 interface IAWSAPIGatewayHandlerOptions {
     url: string;
@@ -20,7 +20,7 @@ export class AWSAPIGatewayHandler implements IHandler {
         this.handle = this.handle.bind(this);
     }
 
-    async handle(eventMessage: IEventMessage) {
+    async handle(message: any) {
 
         let response = await fetch([this._url, this._bucket, this._path].join("/"), {
             method: "POST",
@@ -31,7 +31,7 @@ export class AWSAPIGatewayHandler implements IHandler {
             },
             redirect: "follow",
             referrerPolicy: "no-referrer",
-            body: JSON.stringify({data: eventMessage})
+            body: JSON.stringify({ data: message })
         });
 
         if (response.status !== 200) {
