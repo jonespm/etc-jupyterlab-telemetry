@@ -19,7 +19,7 @@ class RouteHandler(APIHandler):
 
         if resource == 'config':
             with open(os.path.join(os.path.dirname(__file__), 'config.json'), 'r') as config_json:
-                self.finish(config_json.read())
+                self.finish(config_json.read())        
 
 
 def setup_handlers(web_app):

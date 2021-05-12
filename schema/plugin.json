@@ -1,0 +1,64 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "title": "ETC JupyterLab Settings",
+  "description": "Settings for ETC JupyterLab telemetry.",
+  "properties": {
+    "handlers": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "ETC JupyterLab Handlers",
+      "description": "Settings for ETC JupyterLab handlers.",
+      "properties": {
+        "mentoracademy.org/handlers/AWSAPIGatewayHandler": {
+          "type": "object",
+          "additionalProperties": false,
+          "title": "",
+          "description": "",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "default": {
+            "enabled": true
+          }
+        }
+      },
+      "default": {
+        "mentoracademy.org/handlers/AWSAPIGatewayHandler": {}
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "ETC JupyterLab Events",
+      "description": "Settings for ETC JupyterLab events.",
+      "properties": {
+        "mentoracademy.org/schemas/events/1.0.0/SaveNotebookEvent": {
+          "type": "object",
+          "additionalProperties": false,
+          "title": "",
+          "description": "",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "default": {
+            "enable": true
+          }
+        }
+      },
+      "default": {
+        "mentoracademy.org/schemas/events/1.0.0/SaveNotebookEvent": {}
+      }
+    }
+  },
+  "default": {
+    "handler": {},
+    "event": {}
+  }
+}
